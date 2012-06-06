@@ -5,8 +5,6 @@
 
 #include <X11/Xlib.h>
 
-using namespace std;
-
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 class Tiny {
