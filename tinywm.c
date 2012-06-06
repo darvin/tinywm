@@ -3,7 +3,6 @@
  * This software is in the public domain
  * and is provided AS IS, with NO WARRANTY. */
 
-#include <iostream>
 #include <X11/Xlib.h>
 
 using namespace std;
@@ -24,8 +23,6 @@ class Tiny {
     }
 
     void grabButton(int button, int mask) {
-        cout << "grabButton\n";
-
         XGrabButton(dpy, button, mask, DefaultRootWindow(dpy), True,
                     ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
     }
@@ -74,8 +71,6 @@ int main(void)
     if (!dpy) {
         return 1;
     }
-
-    cout << "dpy ok\n";
 
     Tiny wm(dpy);
 
