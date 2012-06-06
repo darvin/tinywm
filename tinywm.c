@@ -3,30 +3,44 @@
  * This software is in the public domain
  * and is provided AS IS, with NO WARRANTY. */
 
+#include <iostream>
 #include <X11/Xlib.h>
+
+using namespace std;
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
-int main(void)
-{
+class Tiny {
     Display * dpy;
     XWindowAttributes attr;
-    XButtonEvent start;
-    XEvent ev;
 
-    if(!(dpy = XOpenDisplay(0x0))) return 1;
+ public:
+    Tiny(Display* dpy) {
+        this->dpy = dpy;
+    };
 
-    XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym("F1")), Mod1Mask,
-            DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
-    XGrabButton(dpy, 1, Mod1Mask, DefaultRootWindow(dpy), True,
-            ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
-    XGrabButton(dpy, 3, Mod1Mask, DefaultRootWindow(dpy), True,
-            ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
+    unsigned int key(const char* name) {
+        return XKeysymToKeycode(dpy, XStringToKeysym(name));
+    }
 
-    start.subwindow = None;
-    for(;;)
-    {
-        XNextEvent(dpy, &ev);
+    void grabButton(int button, int mask) {
+        cout << "grabButton\n";
+
+        XGrabButton(dpy, button, mask, DefaultRootWindow(dpy), True,
+                    ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
+    }
+
+    void grab() {
+        XGrabKey(dpy, key("F1"), Mod1Mask,
+                 DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
+        XGrabKey(dpy, key("r"), Mod4Mask,
+                 DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
+
+        grabButton(1, Mod4Mask);
+        grabButton(3, Mod4Mask);
+    }
+
+    void handleEvent(XEvent& ev, XButtonEvent& start) {
         if(ev.type == KeyPress && ev.xkey.subwindow != None)
             XRaiseWindow(dpy, ev.xkey.subwindow);
         else if(ev.type == ButtonPress && ev.xbutton.subwindow != None)
@@ -49,5 +63,28 @@ int main(void)
             start.subwindow = None;
         }
     }
-}
+};
 
+int main(void)
+{
+    Display * dpy = XOpenDisplay(0x0);
+    XButtonEvent start;
+    XEvent ev;
+
+    if (!dpy) {
+        return 1;
+    }
+
+    cout << "dpy ok\n";
+
+    Tiny wm(dpy);
+
+    wm.grab();
+
+    start.subwindow = None;
+    for(;;)
+    {
+        XNextEvent(dpy, &ev);
+        wm.handleEvent(ev, start);
+    }
+}
