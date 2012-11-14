@@ -3,81 +3,69 @@
  * This software is in the public domain
  * and is provided AS IS, with NO WARRANTY. */
 
+#include <stdio.h>
 #include <X11/Xlib.h>
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
-class Tiny {
-    Display * dpy;
-    XWindowAttributes attr;
+static Display* dpy;
+static XWindowAttributes attr;
+static XButtonEvent start;
+static XEvent ev;
 
- public:
-    Tiny(Display* dpy) {
-        this->dpy = dpy;
-    };
+static void grab() {
+    XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym("F1")), Mod4Mask,
+            DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
+    XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym("m")), Mod4Mask,
+            DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
+    XGrabButton(dpy, 1, Mod4Mask, DefaultRootWindow(dpy), True,
+            ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, 0, 0);
+    XGrabButton(dpy, 3, Mod4Mask, DefaultRootWindow(dpy), True,
+            ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, 0, 0);
+}
 
-    unsigned int key(const char* name) {
-        return XKeysymToKeycode(dpy, XStringToKeysym(name));
-    }
+static void handleMotion() {
+    int xdiff = ev.xbutton.x_root - start.x_root;
+    int ydiff = ev.xbutton.y_root - start.y_root;
+    int isMove = start.button==1;
+    int isResize = start.button==3;
+    XMoveResizeWindow(dpy, start.subwindow,
+                      attr.x + (isMove ? xdiff : 0),
+                      attr.y + (isMove ? ydiff : 0),
+                      MAX(1, attr.width + (isResize ? xdiff : 0)),
+                      MAX(1, attr.height + (isResize ? ydiff : 0)));
+}
 
-    void grabButton(int button, int mask) {
-        XGrabButton(dpy, button, mask, DefaultRootWindow(dpy), True,
-                    ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
-    }
+int main(void)
+{
+    if(!(dpy = XOpenDisplay(0))) return 1;
 
-    void grab() {
-        XGrabKey(dpy, key("F1"), Mod1Mask,
-                 DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
-        XGrabKey(dpy, key("r"), Mod4Mask,
-                 DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
+    grab(dpy);
 
-        grabButton(1, Mod4Mask);
-        grabButton(3, Mod4Mask);
-    }
-
-    void handleEvent(XEvent& ev, XButtonEvent& start) {
-        if(ev.type == KeyPress && ev.xkey.subwindow != None)
-            XRaiseWindow(dpy, ev.xkey.subwindow);
-        else if(ev.type == ButtonPress && ev.xbutton.subwindow != None)
+    start.subwindow = 0;
+    for(;;)
+    {
+        XNextEvent(dpy, &ev);
+        if(ev.type == KeyPress && ev.xkey.subwindow) {
+            printf("%d\n", ev.xkey.keycode);
+            if (ev.xkey.keycode == 58) {
+                XGetWindowAttributes(dpy, ev.xbutton.subwindow, &attr);
+                XMoveResizeWindow(dpy, ev.xbutton.subwindow,
+                                  0, 0, 1800, 1080);
+            } else {
+                XRaiseWindow(dpy, ev.xkey.subwindow);
+            }
+        }
+        else if(ev.type == ButtonPress && ev.xbutton.subwindow)
         {
             XGetWindowAttributes(dpy, ev.xbutton.subwindow, &attr);
             start = ev.xbutton;
         }
-        else if(ev.type == MotionNotify && start.subwindow != None)
-        {
-            int xdiff = ev.xbutton.x_root - start.x_root;
-            int ydiff = ev.xbutton.y_root - start.y_root;
-            XMoveResizeWindow(dpy, start.subwindow,
-                attr.x + (start.button==1 ? xdiff : 0),
-                attr.y + (start.button==1 ? ydiff : 0),
-                MAX(1, attr.width + (start.button==3 ? xdiff : 0)),
-                MAX(1, attr.height + (start.button==3 ? ydiff : 0)));
-        }
+        else if(ev.type == MotionNotify && start.subwindow)
+            handleMotion();
         else if(ev.type == ButtonRelease)
         {
-            start.subwindow = None;
+            start.subwindow = 0;
         }
-    }
-};
-
-int main(void)
-{
-    Display * dpy = XOpenDisplay(0x0);
-    XButtonEvent start;
-    XEvent ev;
-
-    if (!dpy) {
-        return 1;
-    }
-
-    Tiny wm(dpy);
-
-    wm.grab();
-
-    start.subwindow = None;
-    for(;;)
-    {
-        XNextEvent(dpy, &ev);
-        wm.handleEvent(ev, start);
     }
 }
