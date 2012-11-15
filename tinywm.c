@@ -13,7 +13,7 @@ static XWindowAttributes attr;
 static XButtonEvent start;
 static XEvent ev;
 
-static void grab() {
+static void grab(void) {
     XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym("F1")), Mod4Mask,
             DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
     XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym("m")), Mod4Mask,
@@ -24,7 +24,7 @@ static void grab() {
             ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, 0, 0);
 }
 
-static void handleMotion() {
+static void handleMotion(void) {
     int xdiff = ev.xbutton.x_root - start.x_root;
     int ydiff = ev.xbutton.y_root - start.y_root;
     int isMove = start.button==1;
@@ -40,7 +40,7 @@ int main(void)
 {
     if(!(dpy = XOpenDisplay(0))) return 1;
 
-    grab(dpy);
+    grab();
 
     start.subwindow = 0;
     for(;;)
