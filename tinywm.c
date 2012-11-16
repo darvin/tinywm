@@ -8,39 +8,51 @@
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
-static Display* dpy;
-static XWindowAttributes attr;
-static XButtonEvent start;
-static XEvent ev;
+static void grab(void* dpy, char** keys, int* buttons) {
+    for (int i = 0; keys[i]; ++i) {
+        XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym(keys[i])), Mod4Mask,
+                 DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
+    }
 
-static void grab(void) {
-    XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym("F1")), Mod4Mask,
-            DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
-    XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym("m")), Mod4Mask,
-            DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
-    XGrabButton(dpy, 1, Mod4Mask, DefaultRootWindow(dpy), True,
-            ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, 0, 0);
-    XGrabButton(dpy, 3, Mod4Mask, DefaultRootWindow(dpy), True,
-            ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, 0, 0);
+    for (int i = 0; buttons[i]; ++i) {
+        XGrabButton(dpy, buttons[i], Mod4Mask, DefaultRootWindow(dpy), True,
+                    ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
+                    GrabModeAsync, GrabModeAsync, 0, 0);
+    }
 }
 
-static void handleMotion(void) {
-    int xdiff = ev.xbutton.x_root - start.x_root;
-    int ydiff = ev.xbutton.y_root - start.y_root;
-    int isMove = start.button==1;
-    int isResize = start.button==3;
-    XMoveResizeWindow(dpy, start.subwindow,
-                      attr.x + (isMove ? xdiff : 0),
-                      attr.y + (isMove ? ydiff : 0),
-                      MAX(1, attr.width + (isResize ? xdiff : 0)),
-                      MAX(1, attr.height + (isResize ? ydiff : 0)));
+static void resize(void* display, int window, int left, int top, int width, int height) {
+    XMoveResizeWindow(display, window, left, top, width, height);
+}
+
+static void handleMotion(void* dpy, void* attrp, void* startp, void* evp) {
+    XWindowAttributes* attr = attrp;
+    XButtonEvent* start = startp;
+    XEvent* ev = evp;
+
+    int xdiff = ev->xbutton.x_root - start->x_root;
+    int ydiff = ev->xbutton.y_root - start->y_root;
+    int isMove = start->button==1;
+    int isResize = start->button==3;
+    resize(dpy, start->subwindow,
+           attr->x + (isMove ? xdiff : 0),
+           attr->y + (isMove ? ydiff : 0),
+           MAX(1, attr->width + (isResize ? xdiff : 0)),
+           MAX(1, attr->height + (isResize ? ydiff : 0)));
 }
 
 int main(void)
 {
+    Display* dpy;
+    XWindowAttributes attr;
+    XButtonEvent start;
+    XEvent ev;
+
     if(!(dpy = XOpenDisplay(0))) return 1;
 
-    grab();
+    char* keys[] = { "F1", "m", 0 };
+    int buttons[] = { 1, 3, 0 };
+    grab(dpy, keys, buttons);
 
     start.subwindow = 0;
     for(;;)
@@ -62,7 +74,7 @@ int main(void)
             start = ev.xbutton;
         }
         else if(ev.type == MotionNotify && start.subwindow)
-            handleMotion();
+            handleMotion(dpy, &attr, &start, &ev);
         else if(ev.type == ButtonRelease)
         {
             start.subwindow = 0;
