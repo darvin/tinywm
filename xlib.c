@@ -3,7 +3,16 @@
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
-void grab(void* dpy, char** keys, int* buttons) {
+Display* dpy;
+XWindowAttributes attr;
+XButtonEvent start;
+
+int openDisplay(void) {
+    dpy = XOpenDisplay(0);
+    return dpy ? 1 : 0;
+}
+
+void grab(char** keys, int* buttons) {
     for (int i = 0; keys[i]; ++i) {
         XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym(keys[i])), Mod4Mask,
                  DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
@@ -16,32 +25,45 @@ void grab(void* dpy, char** keys, int* buttons) {
     }
 }
 
-void resize(void* display, int window, int left, int top, int width, int height) {
-    XMoveResizeWindow(display, window, left, top, width, height);
+void resize(int window, int left, int top, int width, int height) {
+    XMoveResizeWindow(dpy, window, left, top, width, height);
 }
 
-void handleMotion(void* dpy, void* attrp, void* startp, void* evp) {
-    XWindowAttributes* attr = attrp;
-    XButtonEvent* start = startp;
+void raise(int window) {
+    XRaiseWindow(dpy, window);
+}
+
+void handleMotion(void* evp) {
     XEvent* ev = evp;
 
-    int xdiff = ev->xbutton.x_root - start->x_root;
-    int ydiff = ev->xbutton.y_root - start->y_root;
-    int isMove = start->button==1;
-    int isResize = start->button==3;
-    resize(dpy, start->subwindow,
-           attr->x + (isMove ? xdiff : 0),
-           attr->y + (isMove ? ydiff : 0),
-           MAX(1, attr->width + (isResize ? xdiff : 0)),
-           MAX(1, attr->height + (isResize ? ydiff : 0)));
+    int xdiff = ev->xbutton.x_root - start.x_root;
+    int ydiff = ev->xbutton.y_root - start.y_root;
+    int isMove = start.button==1;
+    int isResize = start.button==3;
+    resize(start.subwindow,
+           attr.x + (isMove ? xdiff : 0),
+           attr.y + (isMove ? ydiff : 0),
+           MAX(1, attr.width + (isResize ? xdiff : 0)),
+           MAX(1, attr.height + (isResize ? ydiff : 0)));
 }
 
-void getAttr(void* dpy, int window, void* attrp) {
-    XGetWindowAttributes(dpy, window, attrp);
+void getAttr(int window) {
+    XGetWindowAttributes(dpy, window, &attr);
 }
 
-XWindowAttributes attr;
+void setStarted(int started) {
+    start.subwindow = started;
+}
 
-void* createAttr(void) {
-    return &attr;
+void setStart(void* evp) {
+    XEvent* ev = evp;
+    start = ev->xbutton;
+}
+
+int isStarted(void) {
+    return start.subwindow;
+}
+
+void nextEvent(void* evp) {
+    XNextEvent(dpy, evp);
 }

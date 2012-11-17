@@ -7,43 +7,35 @@
 #include <X11/Xlib.h>
 #include "xlib.h"
 
-int main(void)
-{
-    void* dpy;
-    void* attr = createAttr();
-    XButtonEvent start;
+int main(void) {
     XEvent ev;
 
-    if(!(dpy = XOpenDisplay(0))) return 1;
+    if (!openDisplay()) {
+        return 1;
+    }
 
     char* keys[] = { "F1", "m", 0 };
     int buttons[] = { 1, 3, 0 };
-    grab(dpy, keys, buttons);
+    grab(keys, buttons);
+    setStarted(0);
 
-    start.subwindow = 0;
-    for(;;)
-    {
-        XNextEvent(dpy, &ev);
-        if(ev.type == KeyPress && ev.xkey.subwindow) {
-            printf("%d\n", ev.xkey.keycode);
+    while (1) {
+        nextEvent(&ev);
+
+        if (ev.type == KeyPress && ev.xkey.subwindow) {
             if (ev.xkey.keycode == 58) {
-                getAttr(dpy, ev.xbutton.subwindow, attr);
-                XMoveResizeWindow(dpy, ev.xbutton.subwindow,
-                                  0, 0, 1800, 1080);
+                getAttr(ev.xkey.subwindow);
+                resize(ev.xkey.subwindow, 0, 0, 1800, 1080);
             } else {
-                XRaiseWindow(dpy, ev.xkey.subwindow);
+                raise(ev.xkey.subwindow);
             }
-        }
-        else if(ev.type == ButtonPress && ev.xbutton.subwindow)
-        {
-            getAttr(dpy, ev.xbutton.subwindow, attr);
-            start = ev.xbutton;
-        }
-        else if(ev.type == MotionNotify && start.subwindow)
-            handleMotion(dpy, attr, &start, &ev);
-        else if(ev.type == ButtonRelease)
-        {
-            start.subwindow = 0;
+        } else if (ev.type == ButtonPress && ev.xbutton.subwindow) {
+            getAttr(ev.xbutton.subwindow);
+            setStart(&ev);
+        } else if (ev.type == MotionNotify && isStarted()) {
+            handleMotion(&ev);
+        } else if (ev.type == ButtonRelease) {
+            setStarted(0);
         }
     }
 }
