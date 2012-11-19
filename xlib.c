@@ -6,6 +6,7 @@
 Display* dpy;
 XWindowAttributes attr;
 XButtonEvent start;
+XEvent ev;
 
 int openDisplay(void) {
     dpy = XOpenDisplay(0);
@@ -25,19 +26,21 @@ void grab(char** keys, int* buttons) {
     }
 }
 
-void resize(int window, int left, int top, int width, int height) {
+static void resize(int window, int left, int top, int width, int height) {
     XMoveResizeWindow(dpy, window, left, top, width, height);
+}
+
+void resizeKeyWindow(int left, int top, int width, int height) {
+    resize(ev.xkey.subwindow, left, top, width, height);
 }
 
 void raise(int window) {
     XRaiseWindow(dpy, window);
 }
 
-void handleMotion(void* evp) {
-    XEvent* ev = evp;
-
-    int xdiff = ev->xbutton.x_root - start.x_root;
-    int ydiff = ev->xbutton.y_root - start.y_root;
+void handleMotion(void) {
+    int xdiff = ev.xbutton.x_root - start.x_root;
+    int ydiff = ev.xbutton.y_root - start.y_root;
     int isMove = start.button==1;
     int isResize = start.button==3;
     resize(start.subwindow,
@@ -55,15 +58,42 @@ void setStarted(int started) {
     start.subwindow = started;
 }
 
-void setStart(void* evp) {
-    XEvent* ev = evp;
-    start = ev->xbutton;
+void setStart(void) {
+    start = ev.xbutton;
 }
 
 int isStarted(void) {
     return start.subwindow;
 }
 
-void nextEvent(void* evp) {
-    XNextEvent(dpy, evp);
+void nextEvent(void) {
+    XNextEvent(dpy, &ev);
+}
+
+int isKeyPress(void) {
+    return ev.type == KeyPress;
+}
+
+int isButtonPress(void) {
+    return ev.type == ButtonPress;
+}
+
+int isMotionNotify(void) {
+    return ev.type == MotionNotify;
+}
+
+int isButtonRelease(void) {
+    return ev.type == ButtonRelease;
+}
+
+int getWindowForKeyEvent(void) {
+    return ev.xkey.subwindow;
+}
+
+int getWindowForButtonEvent(void) {
+    return ev.xbutton.subwindow;
+}
+
+int isKey(char* key) {
+    return ev.xkey.keycode == XKeysymToKeycode(dpy, XStringToKeysym(key));
 }

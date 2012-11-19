@@ -4,12 +4,9 @@
  * and is provided AS IS, with NO WARRANTY. */
 
 #include <stdio.h>
-#include <X11/Xlib.h>
 #include "xlib.h"
 
 int main(void) {
-    XEvent ev;
-
     if (!openDisplay()) {
         return 1;
     }
@@ -20,21 +17,21 @@ int main(void) {
     setStarted(0);
 
     while (1) {
-        nextEvent(&ev);
+        nextEvent();
 
-        if (ev.type == KeyPress && ev.xkey.subwindow) {
-            if (ev.xkey.keycode == 58) {
-                getAttr(ev.xkey.subwindow);
-                resize(ev.xkey.subwindow, 0, 0, 1800, 1080);
+        if (isKeyPress() && getWindowForKeyEvent()) {
+            if (isKey(keys[1])) {
+                getAttr(getWindowForKeyEvent());
+                resizeKeyWindow(0, 0, 1800, 1080);
             } else {
-                raise(ev.xkey.subwindow);
+                raise(getWindowForKeyEvent());
             }
-        } else if (ev.type == ButtonPress && ev.xbutton.subwindow) {
-            getAttr(ev.xbutton.subwindow);
-            setStart(&ev);
-        } else if (ev.type == MotionNotify && isStarted()) {
-            handleMotion(&ev);
-        } else if (ev.type == ButtonRelease) {
+        } else if (isButtonPress() && getWindowForButtonEvent()) {
+            getAttr(getWindowForButtonEvent());
+            setStart();
+        } else if (isMotionNotify() && isStarted()) {
+            handleMotion();
+        } else if (isButtonRelease()) {
             setStarted(0);
         }
     }
