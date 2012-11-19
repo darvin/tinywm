@@ -5,7 +5,6 @@
 
 Display* dpy;
 XWindowAttributes attr;
-XButtonEvent start;
 XEvent ev;
 
 int openDisplay(void) {
@@ -26,7 +25,7 @@ void grab(char** keys, int* buttons) {
     }
 }
 
-static void resize(int window, int left, int top, int width, int height) {
+void resize(int window, int left, int top, int width, int height) {
     XMoveResizeWindow(dpy, window, left, top, width, height);
 }
 
@@ -38,32 +37,20 @@ void raise(int window) {
     XRaiseWindow(dpy, window);
 }
 
-void handleMotion(void) {
-    int xdiff = ev.xbutton.x_root - start.x_root;
-    int ydiff = ev.xbutton.y_root - start.y_root;
-    int isMove = start.button==1;
-    int isResize = start.button==3;
-    resize(start.subwindow,
-           attr.x + (isMove ? xdiff : 0),
-           attr.y + (isMove ? ydiff : 0),
-           MAX(1, attr.width + (isResize ? xdiff : 0)),
-           MAX(1, attr.height + (isResize ? ydiff : 0)));
-}
-
 void getAttr(int window) {
     XGetWindowAttributes(dpy, window, &attr);
 }
 
-void setStarted(int started) {
-    start.subwindow = started;
+int getButton(void) {
+    return ev.xbutton.button;
 }
 
-void setStart(void) {
-    start = ev.xbutton;
+int getXRoot(void) {
+    return ev.xbutton.x_root;
 }
 
-int isStarted(void) {
-    return start.subwindow;
+int getYRoot(void) {
+    return ev.xbutton.y_root;
 }
 
 void nextEvent(void) {
