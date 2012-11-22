@@ -3,7 +3,7 @@ void grab(char** keys, int* buttons);
 void resize(int window, int left, int top, int width, int height);
 void resizeKeyWindow(int left, int top, int width, int height);
 void raise(int window);
-void getAttr(int window);
+struct coordinates { int x, y; } getSize(int window);
 void nextEvent(void);
 int isKeyPress(void);
 int isButtonPress(void);

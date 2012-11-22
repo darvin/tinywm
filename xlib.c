@@ -4,7 +4,6 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 Display* dpy;
-XWindowAttributes attr;
 XEvent ev;
 
 int openDisplay(void) {
@@ -37,8 +36,11 @@ void raise(int window) {
     XRaiseWindow(dpy, window);
 }
 
-void getAttr(int window) {
+struct coordinates getSize(int window) {
+    XWindowAttributes attr;
     XGetWindowAttributes(dpy, window, &attr);
+    struct coordinates r = { attr.x, attr.y };
+    return r;
 }
 
 int getButton(void) {
